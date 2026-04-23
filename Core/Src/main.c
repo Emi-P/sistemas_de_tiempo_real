@@ -62,10 +62,8 @@ static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void vTareaParpadeo(void *pvParameters);
 void vTareaParpadeoA(void *pvParameters);
 void vTareaParpadeoB(void *pvParameters);
-void vHandlePush(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -371,33 +369,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void vHandlePush(void *pvParameters) {
-	while(1){
-		if ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin) == GPIO_PIN_SET ){
-			HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin,GPIO_PIN_SET);
-		}
-		else if ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin) == GPIO_PIN_RESET ){
-			HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin,GPIO_PIN_RESET);
-		}
-		vTaskDelay(pdMS_TO_TICKS(10)); // Handlear cada 10ms
-	}
-}
-
-void vTareaParpadeo(void *pvParameters){
-	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	/* LD 4 led verde */
-	while (1){
-		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay( 500 );
-	}
-}
-void falsoTrabajo(){
-		int x = 0;
-		while(x<10000) {
-			x += 1;
-		};
-		return;
-}
 void vTareaParpadeoA(void *pvParameters){
 	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
 	/* LD 4 led verde */
