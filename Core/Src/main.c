@@ -62,10 +62,7 @@ static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void vTareaParpadeo200(void *pvParameters);
-void vTareaParpadeo400(void *pvParameters);
-void vTareaParpadeo600(void *pvParameters);
-void vTareaParpadeo800(void *pvParameters);
+void vTareaParpadeo(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -144,39 +141,60 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  xTaskCreate(
-	  vTareaParpadeo200,
-      "Blink200",
-      configMINIMAL_STACK_SIZE,
-      NULL,
-      tskIDLE_PRIORITY,
-      NULL
-  );
-  xTaskCreate(
-	  vTareaParpadeo400,
-      "Blink200",
-      configMINIMAL_STACK_SIZE,
-      NULL,
-      tskIDLE_PRIORITY,
-      NULL
-  );
-  xTaskCreate(
-	  vTareaParpadeo600,
-      "Blink200",
-      configMINIMAL_STACK_SIZE,
-      NULL,
-      tskIDLE_PRIORITY,
-      NULL
-  );
-  xTaskCreate(
-	  vTareaParpadeo800,
-      "Blink200",
-      configMINIMAL_STACK_SIZE,
-      NULL,
-      tskIDLE_PRIORITY,
-      NULL
-  );
+  static struct ParpadeoParameters task200Parameters = {
+	  .Pin = LD4_Pin,
+	  .Port = LD4_GPIO_Port,
+	  .ms = 200
+  };
+  static struct ParpadeoParameters task400Parameters = {
+      .Pin = LD3_Pin,
+      .Port = LD3_GPIO_Port,
+      .ms = 400
+  };
+  static struct ParpadeoParameters task600Parameters = {
+      .Pin = LD5_Pin,
+      .Port = LD5_GPIO_Port,
+      .ms = 600
+  };
+  static struct ParpadeoParameters task800Parameters = {
+      .Pin = LD6_Pin,
+      .Port = LD6_GPIO_Port,
+      .ms = 800
+  };
 
+
+  xTaskCreate(
+      vTareaParpadeo,
+      "Blink200",
+      configMINIMAL_STACK_SIZE,
+      &task200Parameters,
+      tskIDLE_PRIORITY,
+      NULL
+  );
+  xTaskCreate(
+      vTareaParpadeo,
+      "Blink400",
+      configMINIMAL_STACK_SIZE,
+      &task400Parameters,
+      tskIDLE_PRIORITY,
+      NULL
+  );
+  xTaskCreate(
+      vTareaParpadeo,
+      "Blink600",
+      configMINIMAL_STACK_SIZE,
+      &task600Parameters,
+      tskIDLE_PRIORITY,
+      NULL
+  );
+  xTaskCreate(
+      vTareaParpadeo,
+      "Blink800",
+      configMINIMAL_STACK_SIZE,
+      &task800Parameters,
+      tskIDLE_PRIORITY,
+      NULL
+  );
 
   vTaskStartScheduler();
   while (1)
@@ -374,39 +392,13 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void vTareaParpadeo200(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 200 );
-	GPIO_TypeDef* port = LD4_GPIO_Port;
-	uint16_t pin = LD4_Pin;
+void vTareaParpadeo(void *pvParameters){
+  // Recibir parametros
+  struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+	/* LD 4 led verde */
+	const TickType_t xDelay200ms = pdMS_TO_TICKS( parameters.ms );
 	while (1){
-		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
-	}
-}
-void vTareaParpadeo400(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 400 );
-	GPIO_TypeDef* port = LD5_GPIO_Port;
-	uint16_t pin = LD5_Pin;
-	while (1){
-		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
-	}
-}
-void vTareaParpadeo600(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 600 );
-	GPIO_TypeDef* port = LD3_GPIO_Port;
-	uint16_t pin = LD3_Pin;
-	while (1){
-		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
-	}
-}
-void vTareaParpadeo800(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 800 );
-	GPIO_TypeDef* port = LD6_GPIO_Port;
-	uint16_t pin = LD6_Pin;
-	while (1){
-		HAL_GPIO_TogglePin(port,pin);
+		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
 		vTaskDelay( xDelay200ms );
 	}
 }
