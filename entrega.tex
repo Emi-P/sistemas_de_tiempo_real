@@ -7,7 +7,9 @@
 \section{Ejercicio 1}
 \subsection{Implementacion}
 Las tareas implementadas son todos de esta pinta,
-con la única diferencia del delay utilizado.
+con la diferencia del delay utilizado para setear
+la variable Delay\_ms y los leds utilizados son uno
+distinto para cada tarea.
 \begin{lstlisting}
     void vTareaParpadeo200(void *pvParameters){
 	const TickType_t Delay_ms = pdMS_TO_TICKS( 200 );
@@ -19,6 +21,49 @@ con la única diferencia del delay utilizado.
         }
     }
 \end{lstlisting}
+Y se crean las tareas de esta manera
+\begin{lstlisting}
+    xTaskCreate(
+        vTareaParpadeo200,
+        "Blink200",
+        configMINIMAL_STACK_SIZE,
+        NULL,
+        tskIDLE_PRIORITY,
+        NULL
+    );
+    ... // 400ms, 600ms
+
+    xTaskCreate(
+        vTareaParpadeo800,
+        "Blink200",
+        configMINIMAL_STACK_SIZE,
+        NULL,
+        tskIDLE_PRIORITY,
+        NULL
+    );
+\end{lstlisting}
+
 \subsection{Conclusiones}
+Todas las tareas se ejecutan. Esto es obvio pues
+cada tarea tiene asignado un led distinto y estos
+están funcionando a periodos diferentes. \\
+Pareciera que hay concurrencia pero dado que el 
+procesador es de un solo nucleo, sabemos que 
+es una ilusión provocada por el scheduling de FREERTOS. Mas claramente
+comprobamos en clase usando el osciloscopio,
+hay una medible diferencia entre el inicio de de una tarea a pesar de
+que esto es aparentemente en el mismo instante.
+
+Los tiempos de conmutación no serán precisos. Pues dado que las
+esperas son no-bloqueantes. El scheduler tendrá que intervenir
+para repartir la cpu y en dichos cambios de contexto se introduce
+jitter.
+\section{Ejercicio 2}
+\subsection{Implementacion}
+\subsection{Conclusiones}
+Con 
+
+
+
 
 \end{document}
