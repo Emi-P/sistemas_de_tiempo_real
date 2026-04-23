@@ -22,3 +22,8 @@
 # CubeMX and the IDE.
 # .mxproject 
 
+entrega.aux
+entrega.fdb_latexmk
+entrega.fls
+entrega.synctex.gz
+entrega.pdf
