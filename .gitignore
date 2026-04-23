@@ -1,0 +1,24 @@
+# Build output directories
+/Debug/
+/Release/
+
+# Object and binary files
+*.elf
+*.map
+*.bin
+*.hex
+*.lst
+*.o
+*.d
+*.su
+
+# IDE-specific logs and configuration
+*.log
+*.launch
+/.settings/
+
+# CubeMX project file (Optional)
+# Keeping .mxproject is often recommended to maintain consistency between 
+# CubeMX and the IDE.
+# .mxproject 
+
