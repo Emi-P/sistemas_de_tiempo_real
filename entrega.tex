@@ -1,5 +1,30 @@
 \documentclass{article}
 \usepackage{listings}
+\usepackage{xcolor}
+\definecolor{mGreen}{rgb}{0,0.6,0}
+\definecolor{mGray}{rgb}{0.5,0.5,0.5}
+\definecolor{mPurple}{rgb}{0.58,0,0.82}
+\definecolor{backgroundColour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{CStyle}{
+    backgroundcolor=\color{backgroundColour},   
+    commentstyle=\color{mGreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{mGray},
+    stringstyle=\color{mPurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                            
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    language=C
+}
+
 \begin{document}
 \title{Entrega Guia 1: Gestión de tareas}
 \maketitle
@@ -10,7 +35,7 @@ Las tareas implementadas son todos de esta pinta,
 con la diferencia del delay utilizado para setear
 la variable Delay\_ms y los leds utilizados son uno
 distinto para cada tarea.
-\begin{lstlisting}
+\begin{lstlisting}[style=CStyle]
     void vTareaParpadeo200(void *pvParameters){
 	const TickType_t Delay_ms = pdMS_TO_TICKS( 200 );
 	GPIO_TypeDef* port = LD4_GPIO_Port;
@@ -22,7 +47,7 @@ distinto para cada tarea.
     }
 \end{lstlisting}
 Y se crean las tareas de esta manera
-\begin{lstlisting}
+\begin{lstlisting}[style=CStyle]
     xTaskCreate(
         vTareaParpadeo200,
         "Blink200",
@@ -58,12 +83,62 @@ Los tiempos de conmutación no serán precisos. Pues dado que las
 esperas son no-bloqueantes. El scheduler tendrá que intervenir
 para repartir la cpu y en dichos cambios de contexto se introduce
 jitter.
+\pagebreak
 \section{Ejercicio 2}
 \subsection{Implementacion}
+La única tarea implementada es
+\begin{lstlisting}[style=CStyle]
+void vTareaParpadeo(void *pvParameters){
+  // Recibir parametros
+    struct ParpadeoParameters parameters = \
+        *(struct ParpadeoParameters *) pvParameters;
+
+    const TickType_t xDelayms = pdMS_TO_TICKS( parameters.ms );
+	while (1){
+		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
+		vTaskDelay( xDelayms );
+        }
+}
+\end{lstlisting}
+Y se inician en main, las tareas:
+\begin{lstlisting}[style=CStyle]
+    // Crear las configuraciones para cada tarea
+    static struct ParpadeoParameters task200Parameters = {
+        .Pin = LD4_Pin,
+        .Port = LD4_GPIO_Port,
+        .ms = 200
+    };
+    // ... 400ms, 600ms, y leds 5 y 3
+    static struct ParpadeoParameters task800Parameters = {
+        .Pin = LD6_Pin,
+        .Port = LD6_GPIO_Port,
+        .ms = 800
+    };
+
+
+    xTaskCreate(
+        vTareaParpadeo,
+        "Blink200",
+        configMINIMAL_STACK_SIZE,
+        &task200Parameters,
+        tskIDLE_PRIORITY,
+        NULL
+         );
+    // ... 400ms, 600ms
+    xTaskCreate(
+        vTareaParpadeo,
+        "Blink800",
+        configMINIMAL_STACK_SIZE,
+        &task800Parameters,
+        tskIDLE_PRIORITY,
+        NULL
+        );
+        
+    \end{lstlisting}
 \subsection{Conclusiones}
 Con 
-
-
-
-
-\end{document}
+        
+        
+        
+        
+        \end{document}
