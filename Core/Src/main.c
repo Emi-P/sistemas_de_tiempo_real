@@ -62,10 +62,8 @@ static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void vTareaParpadeo200(void *pvParameters);
-void vTareaParpadeo400(void *pvParameters);
-void vTareaParpadeo600(void *pvParameters);
-void vTareaParpadeo800(void *pvParameters);
+void vTareaParpadeo(void *pvParameters);
+void vHandlePush(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -144,39 +142,28 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  xTaskCreate(
-	  vTareaParpadeo200,
-      "Blink200",
-      configMINIMAL_STACK_SIZE,
-      NULL,
-      tskIDLE_PRIORITY,
-      NULL
-  );
-  xTaskCreate(
-	  vTareaParpadeo400,
-      "Blink200",
-      configMINIMAL_STACK_SIZE,
-      NULL,
-      tskIDLE_PRIORITY,
-      NULL
-  );
-  xTaskCreate(
-	  vTareaParpadeo600,
-      "Blink200",
-      configMINIMAL_STACK_SIZE,
-      NULL,
-      tskIDLE_PRIORITY,
-      NULL
-  );
-  xTaskCreate(
-	  vTareaParpadeo800,
-      "Blink200",
-      configMINIMAL_STACK_SIZE,
-      NULL,
-      tskIDLE_PRIORITY,
-      NULL
-  );
+  static struct ParpadeoParameters LedBloqueante500ms = {
+	  .Pin = LD4_Pin,
+	  .Port = LD4_GPIO_Port,
+	  .ms = 500
+  };
 
+  xTaskCreate(
+      vTareaParpadeo,
+      "LedBloqueante500ms",
+      configMINIMAL_STACK_SIZE,
+      &LedBloqueante500ms,
+      2,
+      NULL
+  );
+  xTaskCreate(
+	  vHandlePush,
+      "PollingBoton",
+      configMINIMAL_STACK_SIZE,
+      NULL,
+      3,
+      NULL
+  );
 
   vTaskStartScheduler();
   while (1)
@@ -374,43 +361,27 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void vTareaParpadeo200(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 200 );
-	GPIO_TypeDef* port = LD4_GPIO_Port;
-	uint16_t pin = LD4_Pin;
-	while (1){
-		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
-	}
-}
-void vTareaParpadeo400(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 400 );
-	GPIO_TypeDef* port = LD5_GPIO_Port;
-	uint16_t pin = LD5_Pin;
-	while (1){
-		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
-	}
-}
-void vTareaParpadeo600(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 600 );
-	GPIO_TypeDef* port = LD3_GPIO_Port;
-	uint16_t pin = LD3_Pin;
-	while (1){
-		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
-	}
-}
-void vTareaParpadeo800(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 800 );
-	GPIO_TypeDef* port = LD6_GPIO_Port;
-	uint16_t pin = LD6_Pin;
-	while (1){
-		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
+void vHandlePush(void *pvParameters) {
+	while(1){
+		if ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin) == GPIO_PIN_SET ){
+			HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin,GPIO_PIN_SET);
+		}
+		else if ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin) == GPIO_PIN_RESET ){
+			HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin,GPIO_PIN_RESET);
+		}
+		vTaskDelay(pdMS_TO_TICKS(10)); // Handlear cada 10ms
 	}
 }
 
+void vTareaParpadeo(void *pvParameters){
+  // Recibir parametros
+  struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+	/* LD 4 led verde */
+	while (1){
+		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
+		HAL_Delay( 500 );
+	}
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
