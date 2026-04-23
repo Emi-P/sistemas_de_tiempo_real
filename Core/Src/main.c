@@ -62,10 +62,10 @@ static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void vTareaParpadeo(void *pvParameters);
-void vTareaParpadeoA(void *pvParameters);
-void vTareaParpadeoB(void *pvParameters);
-void vHandlePush(void *pvParameters);
+void vTareaParpadeo200(void *pvParameters);
+void vTareaParpadeo400(void *pvParameters);
+void vTareaParpadeo600(void *pvParameters);
+void vTareaParpadeo800(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -144,36 +144,41 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  static struct ParpadeoParameters paramsTareaA = {
- 	  .Pin = LD4_Pin,
- 	  .Port = LD4_GPIO_Port,
- 	  .ms = 500
-   };
-   static struct ParpadeoParameters paramsTareaB = {
- 	  .Pin = LD5_Pin,
- 	  .Port = LD5_GPIO_Port,
- 	  .ms = 500
-   };
-   xTaskCreate(
- 		  vTareaParpadeoA,
- 		  "LedBloqueante500ms",
- 		  configMINIMAL_STACK_SIZE,
- 		  &paramsTareaA,
- 		  0,
- 		  NULL
-   );
-   xTaskCreate(
- 		  vTareaParpadeoB,
- 		  "LedBloqueante500ms",
- 		  configMINIMAL_STACK_SIZE,
- 		  &paramsTareaB,
- 		  0,
- 		  NULL
-   );
+  xTaskCreate(
+	  vTareaParpadeo200,
+      "Blink200",
+      configMINIMAL_STACK_SIZE,
+      NULL,
+      tskIDLE_PRIORITY,
+      NULL
+  );
+  xTaskCreate(
+	  vTareaParpadeo400,
+      "Blink200",
+      configMINIMAL_STACK_SIZE,
+      NULL,
+      tskIDLE_PRIORITY,
+      NULL
+  );
+  xTaskCreate(
+	  vTareaParpadeo600,
+      "Blink200",
+      configMINIMAL_STACK_SIZE,
+      NULL,
+      tskIDLE_PRIORITY,
+      NULL
+  );
+  xTaskCreate(
+	  vTareaParpadeo800,
+      "Blink200",
+      configMINIMAL_STACK_SIZE,
+      NULL,
+      tskIDLE_PRIORITY,
+      NULL
+  );
 
 
-   vTaskStartScheduler();
-
+  vTaskStartScheduler();
   while (1)
   {
     /* USER CODE END WHILE */
@@ -369,54 +374,40 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void vHandlePush(void *pvParameters) {
-	while(1){
-		if ( HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0) == GPIO_PIN_SET ){
-			HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin,GPIO_PIN_SET);
-		}
-		else if ( HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0) == GPIO_PIN_RESET ){
-			HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin,GPIO_PIN_RESET);
-		}
-		vTaskDelay(pdMS_TO_TICKS(10)); // Handlear cada 10ms
+void vTareaParpadeo200(void *pvParameters){
+	const TickType_t xDelay200ms = pdMS_TO_TICKS( 200 );
+	GPIO_TypeDef* port = LD4_GPIO_Port;
+	uint16_t pin = LD4_Pin;
+	while (1){
+		HAL_GPIO_TogglePin(port,pin);
+		vTaskDelay( xDelay200ms );
 	}
 }
-
-void vTareaParpadeo(void *pvParameters){
-	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	/* LD 4 led verde */
+void vTareaParpadeo400(void *pvParameters){
+	const TickType_t xDelay200ms = pdMS_TO_TICKS( 400 );
+	GPIO_TypeDef* port = LD5_GPIO_Port;
+	uint16_t pin = LD5_Pin;
 	while (1){
-		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay( 500 );
+		HAL_GPIO_TogglePin(port,pin);
+		vTaskDelay( xDelay200ms );
 	}
 }
-void falsoTrabajo(){
-		int x = 0;
-		while(x<10000) {
-			x += 1;
-		};
-		return;
-}
-void vTareaParpadeoA(void *pvParameters){
-	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	/* LD 4 led verde */
+void vTareaParpadeo600(void *pvParameters){
+	const TickType_t xDelay200ms = pdMS_TO_TICKS( 600 );
+	GPIO_TypeDef* port = LD3_GPIO_Port;
+	uint16_t pin = LD3_Pin;
 	while (1){
-		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay( 100 );
-//		falsoTrabajo(); // Dado que no funciona HAL_Delay
-		vTaskDelay(pdMS_TO_TICKS(500)); // Handlear cada 10ms
-
+		HAL_GPIO_TogglePin(port,pin);
+		vTaskDelay( xDelay200ms );
 	}
 }
-void vTareaParpadeoB(void *pvParameters){
-	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	TickType_t xLastWakeTime;
-	xLastWakeTime = xTaskGetTickCount();
-	const TickType_t xFrequency = pdMS_TO_TICKS(500);
+void vTareaParpadeo800(void *pvParameters){
+	const TickType_t xDelay200ms = pdMS_TO_TICKS( 800 );
+	GPIO_TypeDef* port = LD6_GPIO_Port;
+	uint16_t pin = LD6_Pin;
 	while (1){
-		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-//		HAL_Delay( 100 );
-		falsoTrabajo();
-		vTaskDelayUntil(&xLastWakeTime, xFrequency);
+		HAL_GPIO_TogglePin(port,pin);
+		vTaskDelay( xDelay200ms );
 	}
 }
 
