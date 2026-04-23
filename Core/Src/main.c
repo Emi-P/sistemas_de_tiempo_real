@@ -375,39 +375,39 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void vTareaParpadeo200(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 200 );
+	const TickType_t Delay_ms = pdMS_TO_TICKS( 200 );
 	GPIO_TypeDef* port = LD4_GPIO_Port;
 	uint16_t pin = LD4_Pin;
 	while (1){
 		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
+		HAL_Delay( Delay_ms );
 	}
 }
 void vTareaParpadeo400(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 400 );
+	const TickType_t Delay_ms = pdMS_TO_TICKS( 400 );
 	GPIO_TypeDef* port = LD5_GPIO_Port;
 	uint16_t pin = LD5_Pin;
 	while (1){
 		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
+		HAL_Delay( Delay_ms );
 	}
 }
 void vTareaParpadeo600(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 600 );
+	const TickType_t Delay_ms = pdMS_TO_TICKS( 600 );
 	GPIO_TypeDef* port = LD3_GPIO_Port;
 	uint16_t pin = LD3_Pin;
 	while (1){
 		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
+		HAL_Delay( Delay_ms );
 	}
 }
 void vTareaParpadeo800(void *pvParameters){
-	const TickType_t xDelay200ms = pdMS_TO_TICKS( 800 );
+	const TickType_t Delay_ms = pdMS_TO_TICKS( 800 );
 	GPIO_TypeDef* port = LD6_GPIO_Port;
 	uint16_t pin = LD6_Pin;
 	while (1){
 		HAL_GPIO_TogglePin(port,pin);
-		vTaskDelay( xDelay200ms );
+		HAL_Delay( Delay_ms );
 	}
 }
 

@@ -6,8 +6,18 @@
 
 \section{Ejercicio 1}
 \subsection{Implementacion}
+Las tareas implementadas son todos de esta pinta,
+con la única diferencia del delay utilizado.
 \begin{lstlisting}
-    1+1
+    void vTareaParpadeo200(void *pvParameters){
+	const TickType_t Delay_ms = pdMS_TO_TICKS( 200 );
+	GPIO_TypeDef* port = LD4_GPIO_Port;
+	uint16_t pin = LD4_Pin;
+	while (1){
+		HAL_GPIO_TogglePin(port,pin);
+		HAL_Delay( Delay_ms );
+        }
+    }
 \end{lstlisting}
 \subsection{Conclusiones}
 
