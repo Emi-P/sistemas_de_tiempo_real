@@ -404,7 +404,7 @@ void vTareaParpadeoA(void *pvParameters){
 	while (1){
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
 		HAL_Delay( 100 );
-		falsoTrabajo(); // Dado que no funciona HAL_Delay
+		// falsoTrabajo(); // Dado que no funciona HAL_Delay
 		vTaskDelay(pdMS_TO_TICKS(500)); // Handlear cada 10ms
 
 	}
@@ -416,8 +416,8 @@ void vTareaParpadeoB(void *pvParameters){
 	const TickType_t xFrequency = pdMS_TO_TICKS(500);
 	while (1){
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-//		HAL_Delay( 100 );
-		falsoTrabajo();
+		HAL_Delay( 100 );
+		// falsoTrabajo();
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 }
