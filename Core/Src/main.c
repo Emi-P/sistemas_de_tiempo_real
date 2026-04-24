@@ -143,31 +143,31 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   static struct ParpadeoParameters paramsTareaA = {
-	  .Pin = LD4_Pin,
-	  .Port = LD4_GPIO_Port,
-	  .ms = 400
+	  .Pin = LD6_Pin,
+	  .Port = LD6_GPIO_Port,
+	  .ms = 300
   };
   static struct ParpadeoParameters paramsTareaB = {
 	  .Pin = LD5_Pin,
 	  .Port = LD5_GPIO_Port,
-	  .ms = 500
+	  .ms = 300
   };
 
 
   xTaskCreate(
 		  vTareaParpadeoA,
-		  "LedBloqueante-Delay500ms",
+		  "Led300msSubrePrio",
 		  configMINIMAL_STACK_SIZE,
 		  &paramsTareaA,
-		  0,
+		  1,
 		  NULL
   );
   xTaskCreate(
 		  vTareaParpadeoB,
-		  "LedBloqueante-DelayUntil500ms",
+		  "Led300ms",
 		  configMINIMAL_STACK_SIZE,
 		  &paramsTareaB,
-		  0,
+		  1,
 		  NULL
   );
 
@@ -371,22 +371,28 @@ static void MX_GPIO_Init(void)
 
 void vTareaParpadeoA(void *pvParameters){
 	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	while (1){
-		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay( 100 ); // Trabajo simulado
-		vTaskDelay(pdMS_TO_TICKS(parameters.ms));
-
-	}
-}
-void vTareaParpadeoB(void *pvParameters){
-	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	TickType_t xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
 	const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
 	while (1){
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay( 100 ); // Trabajo simulado
-		vTaskDelayUntil(&xLastWakeTime, xFrequency);
+		HAL_Delay(xFrequency);
+	}
+}
+void vTareaParpadeoB(void *pvParameters){
+	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+	xLastWakeTime = xTaskGetTickCount();
+	UBaseType_t FormerPriority = uxTaskPriorityGet(NULL);
+	const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
+	while (1){
+		if ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin) == GPIO_PIN_SET ){
+			HAL_GPIO_WritePin(parameters.Port, parameters.Pin,GPIO_PIN_SET);
+			vTaskPrioritySet(NULL,2);
+			HAL_Delay(3000);
+			vTaskPrioritySet(NULL,FormerPriority);
+
+		}
+		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
+		HAL_Delay(xFrequency);
 	}
 }
 /* USER CODE END 4 */
