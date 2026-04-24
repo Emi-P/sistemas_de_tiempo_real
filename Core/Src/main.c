@@ -371,11 +371,9 @@ static void MX_GPIO_Init(void)
 
 void vTareaParpadeoA(void *pvParameters){
 	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	/* LD 4 led verde */
 	while (1){
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay( 100 );
-		// falsoTrabajo(); // Dado que no funciona HAL_Delay
+		HAL_Delay( 100 ); // Trabajo simulado
 		vTaskDelay(pdMS_TO_TICKS(500)); // Handlear cada 10ms
 
 	}
@@ -387,8 +385,7 @@ void vTareaParpadeoB(void *pvParameters){
 	const TickType_t xFrequency = pdMS_TO_TICKS(500);
 	while (1){
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay( 100 );
-		// falsoTrabajo();
+		HAL_Delay( 100 ); // Trabajo simulado
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 }
