@@ -141,11 +141,67 @@ En el Desafío 2 las tareas utilizan vTaskDelay, lo que introduce estados de blo
 \section{Ejercicio 3}
 \subsection{Implementacion}
 \begin{lstlisting}[style=CStyle]
-
-\end{lstlisting}
-\begin{lstlisting}[style=CStyle]
+    void vHandlePush(void *pvParameters) {
+        while(1){
+            if ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin) == GPIO_PIN_SET ){
+                HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin,GPIO_PIN_SET);
+            }
+            else if ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin) == GPIO_PIN_RESET ){
+                HAL_GPIO_WritePin(LD6_GPIO_Port,LD6_Pin,GPIO_PIN_RESET);
+            }
+            vTaskDelay(pdMS_TO_TICKS(10)); // Bloquearse 10ms
+        }
+    }
     
+    void vTareaParpadeo(void *pvParameters){
+      // Recibir parametros
+      struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+        while (1){
+            HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
+            HAL_Delay( 500 );
+        }
+    }
 \end{lstlisting}
-        
-        
+vHandlePush hará polling cada 10ms para verificar
+el estado del bóton y aplicar el estado correspondiente al LED.
+La otra tarea se reutilizo de ejercicios pero ahora es no-bloqueante 
+por usar HAL\_Delay como servicio de espera.
+
+\pagebreak
+Se crean las tareas de esta manera
+\begin{lstlisting}[style=CStyle]
+    static struct ParpadeoParameters LedBloqueante500ms = {
+        .Pin = LD4_Pin,
+        .Port = LD4_GPIO_Port,
+        .ms = 500
+    };
+  
+    xTaskCreate(
+        vTareaParpadeo,
+        "LedBloqueante500ms",
+        configMINIMAL_STACK_SIZE,
+        &LedBloqueante500ms,
+        2,
+        NULL
+    );
+    xTaskCreate(
+        vHandlePush,
+        "PollingBoton",
+        configMINIMAL_STACK_SIZE,
+        NULL,
+        3,
+        NULL
+    );
+\end{lstlisting}
+\subsection{Conclusiones}
+Al usar tiempos de vTaskDelay mas altos, el botón responde muy 
+tarde al pulsar y soltar. Y es posible hallar ventanas
+donde se puede presionar y soltar sin respuesta de ningún tipo.
+Un vTaskDelay de 10ms satisface la consigna, pues asegura que 
+la tarea no estaría más de 10ms bloqueada y sabemos 
+que una vez se ponga READY, el scheduler decide ejecutarla.
+Esto no se asegura con total precision, pues se introduce un jitter
+por el cambio de contexto, dado que la otra tarea siempre está ejecutando
+el resto del tiempo.
+   
 \end{document}
