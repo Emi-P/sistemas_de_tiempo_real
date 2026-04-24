@@ -105,7 +105,7 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();
+//  osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -136,7 +136,7 @@ int main(void)
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
-  osKernelStart();
+//  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
 
@@ -374,7 +374,7 @@ void vTareaParpadeoA(void *pvParameters){
 	while (1){
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
 		HAL_Delay( 100 ); // Trabajo simulado
-		vTaskDelay(pdMS_TO_TICKS(parameters.ms)); // Handlear cada 10ms
+		vTaskDelay(pdMS_TO_TICKS(parameters.ms));
 
 	}
 }
