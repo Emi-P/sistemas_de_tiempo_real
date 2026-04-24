@@ -208,13 +208,12 @@ el resto del tiempo.
 \section{Ejercicio 4}
 \subsection{Implementación}
 \begin{lstlisting}[style=CStyle]
-
     void vTareaParpadeoA(void *pvParameters){
         struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
         while (1){
             HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
             HAL_Delay( 100 ); // Trabajo simulado
-            vTaskDelay(pdMS_TO_TICKS(500)); // Handlear cada 10ms
+            vTaskDelay(pdMS_TO_TICKS(parameters.ms)); // Handlear cada 10ms
     
         }
     }
@@ -222,7 +221,7 @@ el resto del tiempo.
         struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
         TickType_t xLastWakeTime;
         xLastWakeTime = xTaskGetTickCount();
-        const TickType_t xFrequency = pdMS_TO_TICKS(500);
+        const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
         while (1){
             HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
             HAL_Delay( 100 ); // Trabajo simulado
@@ -234,12 +233,14 @@ Notar que la TareaB utiliza vTaskDelayUntil en vez de vTaskDelay como
 en TareaA.
 \pagebreak
 
-Las tareas se crean con la misma prioridad, y usando LED's diferentes
+Las tareas se crean con la misma prioridad, y usando LED's diferentes.
+Notar que se setea el campo ms de forma 
+diferente
 \begin{lstlisting}[style=CStyle]
     static struct ParpadeoParameters paramsTareaA = {
         .Pin = LD4_Pin,
         .Port = LD4_GPIO_Port,
-        .ms = 500
+        .ms = 400
     };
     static struct ParpadeoParameters paramsTareaB = {
         .Pin = LD5_Pin,
@@ -267,9 +268,17 @@ Las tareas se crean con la misma prioridad, y usando LED's diferentes
   
 \end{lstlisting}
 \subsection{Conclusiones}
-El tiempo utilizado en las tareas es en ambos casos de 500ms, de
-forma que se mantenga la periodicidad para llamar 
-a HAL\_GPIO\_TogglePin().
+El tiempo utilizado en la TareaA es de 400ms, pues
+para mantener una periodicidad de 500ms con un
+trabajo de 100ms necesitamos compensar el retardo
+agregado por el trabajo.
+En el caso de TareaB, vTaskDelayUntil es capaz
+de compensar el retardo agregado por el trabajo de 100ms
+pues considera el tiempo absoluto desde que inicio la tarea. \\
 
-Pero sucede que 
+Si ambos argumentos son iguales de 500ms, se observa
+un desfase muy exagerado en la conmutación de los LED's. Dado
+que la TareaA termina el trabajo de 100ms y es entonces que comienza
+a esperar 500ms para desbloquearse.
+En cambio la TareaB considera la diferencia.
 \end{document}
