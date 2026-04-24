@@ -371,15 +371,17 @@ static void MX_GPIO_Init(void)
 
 void vTareaParpadeoA(void *pvParameters){
 	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+	TickType_t xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
 	const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
 	while (1){
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay(xFrequency);
+		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 }
 void vTareaParpadeoB(void *pvParameters){
 	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+	TickType_t xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
 	UBaseType_t FormerPriority = uxTaskPriorityGet(NULL);
 	const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
@@ -392,7 +394,7 @@ void vTareaParpadeoB(void *pvParameters){
 
 		}
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay(xFrequency);
+		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
 }
 /* USER CODE END 4 */
