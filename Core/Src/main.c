@@ -105,7 +105,7 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Init scheduler */
-//  osKernelInitialize();
+  osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -125,7 +125,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-//  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -136,7 +136,7 @@ int main(void)
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
-//  osKernelStart();
+  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
 
@@ -156,7 +156,7 @@ int main(void)
 
   xTaskCreate(
 		  vTareaParpadeoA,
-		  "LedBloqueante500ms",
+		  "LedBloqueante-Delay500ms",
 		  configMINIMAL_STACK_SIZE,
 		  &paramsTareaA,
 		  0,
@@ -164,7 +164,7 @@ int main(void)
   );
   xTaskCreate(
 		  vTareaParpadeoB,
-		  "LedBloqueante500ms",
+		  "LedBloqueante-DelayUntil500ms",
 		  configMINIMAL_STACK_SIZE,
 		  &paramsTareaB,
 		  0,
@@ -287,11 +287,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
   HAL_GPIO_Init(PDM_OUT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA0 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0;
-  GPIO_InitStruct.Mode = GPIO_MODE_EVT_RISING;
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : I2S3_WS_Pin */
   GPIO_InitStruct.Pin = I2S3_WS_Pin;
