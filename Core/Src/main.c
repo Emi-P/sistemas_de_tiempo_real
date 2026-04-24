@@ -370,29 +370,37 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 
 void vTareaParpadeoA(void *pvParameters){
-	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	TickType_t xLastWakeTime;
-	xLastWakeTime = xTaskGetTickCount();
-	const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
-	while (1){
-		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		vTaskDelayUntil(&xLastWakeTime, xFrequency);
-	}
+    struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
+
+    UBaseType_t prioOriginal = uxTaskPriorityGet(NULL);
+    TickType_t tiempoFin = 0;
+    BaseType_t enBoost = pdFALSE;
+
+    while (1){
+        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET){
+            vTaskPrioritySet(NULL, prioOriginal + 1);
+            tiempoFin = xTaskGetTickCount() + pdMS_TO_TICKS(3000);
+            enBoost = pdTRUE;
+        }
+
+        if (enBoost == pdTRUE && xTaskGetTickCount() >= tiempoFin){
+            vTaskPrioritySet(NULL, prioOriginal);
+            enBoost = pdFALSE;
+        }
+
+        HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
+        HAL_Delay(parameters.ms);
+    }
 }
+
 void vTareaParpadeoB(void *pvParameters){
 	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
 	TickType_t xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
-	UBaseType_t FormerPriority = uxTaskPriorityGet(NULL);
 	const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
 	while (1){
-		if ( HAL_GPIO_ReadPin(B1_GPIO_Port,B1_Pin) == GPIO_PIN_SET ){
-			HAL_GPIO_WritePin(parameters.Port, parameters.Pin,GPIO_PIN_SET);
-			vTaskPrioritySet(NULL,2);
-			HAL_Delay(3000);
-			vTaskPrioritySet(NULL,FormerPriority);
-
-		}
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
 		vTaskDelayUntil(&xLastWakeTime, xFrequency);
 	}
