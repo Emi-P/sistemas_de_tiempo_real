@@ -30,7 +30,7 @@
 \maketitle
 
 \section{Ejercicio 1}
-\subsection{Implementacion}
+\subsection{Implementación}
 Las tareas implementadas son todos de esta pinta,
 con la diferencia del delay utilizado para setear
 la variable Delay\_ms y los leds utilizados son uno
@@ -85,7 +85,7 @@ para repartir la cpu y en dichos cambios de contexto se introduce
 jitter.
 \pagebreak
 \section{Ejercicio 2}
-\subsection{Implementacion}
+\subsection{Implementación}
 La única tarea implementada es
 \begin{lstlisting}[style=CStyle]
 void vTareaParpadeo(void *pvParameters){
@@ -139,7 +139,7 @@ Y se inician en main, las tareas:
 En el Desafío 2 las tareas utilizan vTaskDelay, lo que introduce estados de bloqueo (Blocked). A diferencia del Desafío 1, donde las tareas permanecían activas usando busy-wait, ahora ceden el CPU voluntariamente. Esto permite al scheduler gestionar mejor la ejecución, reduce la competencia por CPU y disminuye el jitter. Como resultado, los períodos de conmutación son más estables, aunque siguen limitados por la resolución del tick del sistema.
         
 \section{Ejercicio 3}
-\subsection{Implementacion}
+\subsection{Implementación}
 \begin{lstlisting}[style=CStyle]
     void vHandlePush(void *pvParameters) {
         while(1){
@@ -203,5 +203,73 @@ que una vez se ponga READY, el scheduler decide ejecutarla.
 Esto no se asegura con total precision, pues se introduce un jitter
 por el cambio de contexto, dado que la otra tarea siempre está ejecutando
 el resto del tiempo.
-   
+
+\pagebreak
+\section{Ejercicio 4}
+\subsection{Implementación}
+\begin{lstlisting}[style=CStyle]
+
+    void vTareaParpadeoA(void *pvParameters){
+        struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+        while (1){
+            HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
+            HAL_Delay( 100 ); // Trabajo simulado
+            vTaskDelay(pdMS_TO_TICKS(500)); // Handlear cada 10ms
+    
+        }
+    }
+    void vTareaParpadeoB(void *pvParameters){
+        struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+        TickType_t xLastWakeTime;
+        xLastWakeTime = xTaskGetTickCount();
+        const TickType_t xFrequency = pdMS_TO_TICKS(500);
+        while (1){
+            HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
+            HAL_Delay( 100 ); // Trabajo simulado
+            vTaskDelayUntil(&xLastWakeTime, xFrequency);
+        }
+    }
+\end{lstlisting}
+Notar que la TareaB utiliza vTaskDelayUntil en vez de vTaskDelay como
+en TareaA.
+\pagebreak
+
+Las tareas se crean con la misma prioridad, y usando LED's diferentes
+\begin{lstlisting}[style=CStyle]
+    static struct ParpadeoParameters paramsTareaA = {
+        .Pin = LD4_Pin,
+        .Port = LD4_GPIO_Port,
+        .ms = 500
+    };
+    static struct ParpadeoParameters paramsTareaB = {
+        .Pin = LD5_Pin,
+        .Port = LD5_GPIO_Port,
+        .ms = 500
+    };
+  
+  
+    xTaskCreate(
+            vTareaParpadeoA,
+            "LedBloqueante-Delay500ms",
+            configMINIMAL_STACK_SIZE,
+            &paramsTareaA,
+            0,
+            NULL
+    );
+    xTaskCreate(
+            vTareaParpadeoB,
+            "LedBloqueante-DelayUntil500ms",
+            configMINIMAL_STACK_SIZE,
+            &paramsTareaB,
+            0,
+            NULL
+    );
+  
+\end{lstlisting}
+\subsection{Conclusiones}
+El tiempo utilizado en las tareas es en ambos casos de 500ms, de
+forma que se mantenga la periodicidad para llamar 
+a HAL\_GPIO\_TogglePin().
+
+Pero sucede que 
 \end{document}
