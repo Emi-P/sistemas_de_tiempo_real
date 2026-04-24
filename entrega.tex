@@ -290,41 +290,40 @@ En cambio la TareaB considera la diferencia.
 \subsection{Implementación}
 \begin{lstlisting}[style=CStyle]
     void vTareaParpadeoA(void *pvParameters){
-    struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
-
-    UBaseType_t prioOriginal = uxTaskPriorityGet(NULL);
-    TickType_t tiempoFin = 0;
-    BaseType_t enBoost = pdFALSE;
-
-    while (1){
-        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET){
-            vTaskPrioritySet(NULL, prioOriginal + 1);
-            tiempoFin = xTaskGetTickCount() + pdMS_TO_TICKS(3000);
-            enBoost = pdTRUE;
+        struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+    
+        UBaseType_t prioOriginal = uxTaskPriorityGet(NULL);
+        TickType_t tiempoFin = 0;
+        BaseType_t enBoost = pdFALSE;
+    
+        while (1){
+            if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET){
+                vTaskPrioritySet(NULL, prioOriginal + 1);
+                tiempoFin = xTaskGetTickCount() + pdMS_TO_TICKS(3000);
+                enBoost = pdTRUE;
+            }
+    
+            if (enBoost == pdTRUE && xTaskGetTickCount() >= tiempoFin){
+                vTaskPrioritySet(NULL, prioOriginal);
+                enBoost = pdFALSE;
+            }
+    
+            HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
+    
+            HAL_Delay(parameters.ms);
         }
-
-        if (enBoost == pdTRUE && xTaskGetTickCount() >= tiempoFin){
-            vTaskPrioritySet(NULL, prioOriginal);
-            enBoost = pdFALSE;
-        }
-
-        HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-        HAL_Delay(parameters.ms);
     }
-}
-
-void vTareaParpadeoB(void *pvParameters){
-	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	TickType_t xLastWakeTime;
-	xLastWakeTime = xTaskGetTickCount();
-	const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
-	while (1){
-		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		vTaskDelayUntil(&xLastWakeTime, xFrequency);
-	}
-}
+    
+    void vTareaParpadeoB(void *pvParameters){
+        struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
+        TickType_t xLastWakeTime;
+        xLastWakeTime = xTaskGetTickCount();
+        const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
+        while (1){
+            HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
+            HAL_Delay(xFrequency);
+        }
+    }
 \end{lstlisting}
 La lógica de la TareaB es sencila. Solamente se 
 encarga de hacer un toggleo periodico del LED. Notar
@@ -340,7 +339,19 @@ durante un boosteo. Además tiempoFin guarda el instante de tiempo
 Si ya pasó el momento tiempoFin y se esta un boosteando
 se vuelve la variable enBoost a pdFALSE.
 
+Las esperas en ambas tareas son, no-bloqueantes para observar el starving al tener la TareaA
+en una prioridad mayor.
 \subsection{Conclusiones}
+Al restablecerse la prioridad de la TareaA, la 
+conmutación del LED para la TareaB vuelve a ser normal
+
+El conteo de los 3 segundos es mediante xTaskGetTickCount(), de forma
+que se calcula el tiempo en el que pasaran los 3 segundos.
+Podria haberse utilizado una espera de 3 segundos usando HAL_Delay(), pero 
+con esa implementación no se mantendra el parpadeo de la TareaA.
+No se puede utilizar vTaskDelay ni vTaskDelayUntil, pues bloquearían
+el proceso de la TareaA resultando que la TareaB pueda reanudar
+en esas ventanas de tiempo a pesar de ser de menor prioridad.
 
 
 \end{document}
