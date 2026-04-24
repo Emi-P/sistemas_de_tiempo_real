@@ -145,7 +145,7 @@ int main(void)
   static struct ParpadeoParameters paramsTareaA = {
 	  .Pin = LD4_Pin,
 	  .Port = LD4_GPIO_Port,
-	  .ms = 500
+	  .ms = 400
   };
   static struct ParpadeoParameters paramsTareaB = {
 	  .Pin = LD5_Pin,
@@ -374,7 +374,7 @@ void vTareaParpadeoA(void *pvParameters){
 	while (1){
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
 		HAL_Delay( 100 ); // Trabajo simulado
-		vTaskDelay(pdMS_TO_TICKS(500)); // Handlear cada 10ms
+		vTaskDelay(pdMS_TO_TICKS(parameters.ms)); // Handlear cada 10ms
 
 	}
 }
@@ -382,7 +382,7 @@ void vTareaParpadeoB(void *pvParameters){
 	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
 	TickType_t xLastWakeTime;
 	xLastWakeTime = xTaskGetTickCount();
-	const TickType_t xFrequency = pdMS_TO_TICKS(500);
+	const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
 	while (1){
 		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
 		HAL_Delay( 100 ); // Trabajo simulado
