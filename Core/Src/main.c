@@ -22,7 +22,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "FreeRTOS.h"
+#include "task.h"
+#include "semphr.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,7 +55,7 @@ const osThreadAttr_t defaultTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-
+SemaphoreHandle_t xButtonSemaphore;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,8 +64,7 @@ static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void vTareaParpadeoA(void *pvParameters);
-void vTareaParpadeoB(void *pvParameters);
+void vTareaBoton(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -142,35 +143,9 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  static struct ParpadeoParameters paramsTareaA = {
-	  .Pin = LD6_Pin,
-	  .Port = LD6_GPIO_Port,
-	  .ms = 300
-  };
-  static struct ParpadeoParameters paramsTareaB = {
-	  .Pin = LD5_Pin,
-	  .Port = LD5_GPIO_Port,
-	  .ms = 300
-  };
 
-
-  xTaskCreate(
-		  vTareaParpadeoA,
-		  "Led300msSubrePrio",
-		  configMINIMAL_STACK_SIZE,
-		  &paramsTareaA,
-		  1,
-		  NULL
-  );
-  xTaskCreate(
-		  vTareaParpadeoB,
-		  "Led300ms",
-		  configMINIMAL_STACK_SIZE,
-		  &paramsTareaB,
-		  1,
-		  NULL
-  );
-
+  xButtonSemaphore = xSemaphoreCreateBinary();
+  xTaskCreate(vTareaBoton, "Boton", 128, NULL, 1, NULL);
 
   vTaskStartScheduler();
   while (1)
@@ -287,11 +262,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
   HAL_GPIO_Init(PDM_OUT_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : I2S3_WS_Pin */
   GPIO_InitStruct.Pin = I2S3_WS_Pin;
@@ -362,48 +337,41 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-void vTareaParpadeoA(void *pvParameters){
-    struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-
-    UBaseType_t prioOriginal = uxTaskPriorityGet(NULL);
-    TickType_t tiempoFin = 0;
-    BaseType_t enBoost = pdFALSE;
-
-    while (1){
-        if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_SET){
-            vTaskPrioritySet(NULL, prioOriginal + 1);
-            tiempoFin = xTaskGetTickCount() + pdMS_TO_TICKS(3000);
-            enBoost = pdTRUE;
-        }
-
-        if (enBoost == pdTRUE && xTaskGetTickCount() >= tiempoFin){
-            vTaskPrioritySet(NULL, prioOriginal);
-            enBoost = pdFALSE;
-        }
-
-        HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-
-        HAL_Delay(parameters.ms);
+    if (GPIO_Pin == GPIO_PIN_0){
+        xSemaphoreGiveFromISR(xButtonSemaphore, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 }
 
-void vTareaParpadeoB(void *pvParameters){
-	struct ParpadeoParameters parameters = *(struct ParpadeoParameters *) pvParameters;
-	TickType_t xLastWakeTime;
-	xLastWakeTime = xTaskGetTickCount();
-	const TickType_t xFrequency = pdMS_TO_TICKS(parameters.ms);
-	while (1){
-		HAL_GPIO_TogglePin(parameters.Port, parameters.Pin);
-		HAL_Delay(xFrequency);
-	}
+void vTareaBoton(void *pvParameters){
+    TickType_t lastTime = 0;
+    const TickType_t debounceDelay = pdMS_TO_TICKS(50);
+
+    while (1){
+        xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
+
+        TickType_t now = xTaskGetTickCount();
+
+        if ((now - lastTime) > debounceDelay){
+            HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+            lastTime = now;
+        }
+    }
 }
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
