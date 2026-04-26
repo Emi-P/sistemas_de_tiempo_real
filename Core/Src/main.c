@@ -363,11 +363,23 @@ void vTareaBoton(void *pvParameters){
         xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
 
         HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-        HAL_Delay(20); // Debounce
-
+        vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
 
     }
 }
+//void vTareaBoton(void *pvParameters) {
+//    uint16_t leds[] = {LD3_Pin, LD4_Pin, LD5_Pin, LD6_Pin};
+//    int i = 0;
+//
+//    while (1) {
+//        xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
+//        HAL_GPIO_WritePin(GPIOD, leds[i], GPIO_PIN_RESET);
+//        i = (i + 1) % 4;
+//        HAL_GPIO_WritePin(GPIOD, leds[i], GPIO_PIN_SET);
+//        vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
+//
+//        }
+//}
 
 /* USER CODE END 4 */
 
