@@ -557,9 +557,72 @@ Y en la main se configura
 \pagebreak
 \section{Ejercicio 8}
 \subsection{Implementación}
+Consideramos que el recurso con acceso
+exclusivo es todos los LEDs. Asi que
+para iniciar cada secuencia es necesario
+tener el mutex.
 \begin{lstlisting}[style=CStyle]
+    void vTareaA(void *pvParameters){
+        while(1){
+            xSemaphoreTake(xLEDMutex, portMAX_DELAY);
+            HAL_GPIO_WritePin(GPIOD, LD3_Pin, GPIO_PIN_SET);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            HAL_GPIO_WritePin(GPIOD, LD3_Pin, GPIO_PIN_RESET);
+
+            HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_SET);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_RESET);
+
+            HAL_GPIO_WritePin(GPIOD, LD5_Pin, GPIO_PIN_SET);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            HAL_GPIO_WritePin(GPIOD, LD5_Pin, GPIO_PIN_RESET);
+
+            HAL_GPIO_WritePin(GPIOD, LD6_Pin, GPIO_PIN_SET);
+            vTaskDelay(pdMS_TO_TICKS(100));
+            HAL_GPIO_WritePin(GPIOD, LD6_Pin, GPIO_PIN_RESET);
+            xSemaphoreGive(xLEDMutex);
+        }
+    }
+
+    void vTareaB(void *pvParameters){
+        while(1){
+            xSemaphoreTake(xLEDMutex, portMAX_DELAY);
+            for(int i = 0; i < 4; i++){
+                HAL_GPIO_WritePin(GPIOD, LD3_Pin | LD4_Pin | LD5_Pin | LD6_Pin, GPIO_PIN_SET);
+                vTaskDelay(pdMS_TO_TICKS(150));
+
+                HAL_GPIO_WritePin(GPIOD, LD3_Pin | LD4_Pin | LD5_Pin | LD6_Pin, GPIO_PIN_RESET);
+                vTaskDelay(pdMS_TO_TICKS(150));
+            }
+            xSemaphoreGive(xLEDMutex);
+        }
+    }
 \end{lstlisting}
+\pagebreak
+En la main creamos las tareas como
+\begin{lstlisting}[style=CStyle]
+    /* USER CODE BEGIN WHILE */
+    xLEDMutex = xSemaphoreCreateMutex();
+  
+    xTaskCreate(vTareaA, "LED1", 128, NULL, 1, NULL);
+    xTaskCreate(vTareaB, "LED2", 128, NULL, 1, NULL);
+  
+    vTaskStartScheduler();
+
+\end{lstlisting}
+
 \subsection{Conclusiones}
+En este ejercicio particular, el uso de
+un mutex garantiza la exclusión mutua
+sobre los LEDs, por lo que
+el efecto visual no se ve afectado
+incluso si se usa HAL\_Delay().
+Sin embargo, esta solución no es
+adecuada en un entorno 
+RTOS. El uso de HAL\_Delay()
+resulta aceptable solo en contextos
+muy simples donde no hay que
+compartir el CPU con mas tareas.
 
 \section{Ejercicio 9}
 \subsection{Implementación}
@@ -570,6 +633,7 @@ Y en la main se configura
 \section{Ejercicio 10}
 \subsection{Implementación}
 \begin{lstlisting}[style=CStyle]
+
 \end{lstlisting}
 \subsection{Conclusiones}
 
