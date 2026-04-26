@@ -38,7 +38,7 @@
 \subsection{Implementación}
 Las tareas implementadas son todos de esta pinta,
 con la diferencia del delay utilizado para setear
-la variable Delay\_ms y los leds utilizados son uno
+la variable Delay\_ms y los LEDs utilizados son uno
 distinto para cada tarea.
 \begin{lstlisting}[style=CStyle]
     void vTareaParpadeo200(void *pvParameters){
@@ -75,7 +75,7 @@ Y se crean las tareas de esta manera
 
 \subsection{Conclusiones}
 Todas las tareas se ejecutan. Esto es obvio pues
-cada tarea tiene asignado un led distinto y estos
+cada tarea tiene asignado un LED distinto y estos
 están funcionando a periodos diferentes. \\
 Pareciera que hay concurrencia pero dado que el 
 procesador es de un solo nucleo, sabemos que 
@@ -113,7 +113,7 @@ Y se inician en main, las tareas:
         .Port = LD4_GPIO_Port,
         .ms = 200
     };
-    // ... 400ms, 600ms, y leds 5 y 3
+    // ... 400ms, 600ms, y LEDs 5 y 3
     static struct ParpadeoParameters task800Parameters = {
         .Pin = LD6_Pin,
         .Port = LD6_GPIO_Port,
@@ -347,11 +347,76 @@ conmutación del LED para la TareaB vuelve a ser normal
 
 El conteo de los 3 segundos es mediante xTaskGetTickCount(), de forma
 que se calcula el tiempo en el que pasaran los 3 segundos.
-Podria haberse utilizado una espera de 3 segundos usando HAL_Delay(), pero 
+Podria haberse utilizado una espera de 3 segundos usando HAL\_Delay(), pero 
 con esa implementación no se mantendra el parpadeo de la TareaA.
 No se puede utilizar vTaskDelay ni vTaskDelayUntil, pues bloquearían
 el proceso de la TareaA resultando que la TareaB pueda reanudar
 en esas ventanas de tiempo a pesar de ser de menor prioridad.
 
 
+\section{Ejercicio 6}
+\subsection{Implementación}
+\begin{lstlisting}[style=CStyle]
+    void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+        if (GPIO_Pin == GPIO_PIN_0){
+            xSemaphoreGiveFromISR(xButtonSemaphore, &xHigherPriorityTaskWoken);
+
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        }
+    }
+    void vTareaBoton(void *pvParameters){
+        while (1){
+
+            xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
+
+            HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+            vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
+
+        }
+    }
+
+\end{lstlisting}
+El código del callback es sencillo, habilita la posibilidad de tomar
+el sémaforo cada vez que se levanta la interrupción si 
+fue por haberse presionado el botón en GPIO\_PIN\_0.
+
+vTareaBoton está casi siempre bloqueada, pues
+cada vez que ejecuta xSemaphoreTake, debe esperar
+a que el callback le de la posibilidad de tomarlo nuevamente.
+
+Agrega una pequeña espera para reducir el bounce del botón.
+
+\subsection{Conclusiones}
+Se propone hacer que el LED a encender rote 
+entre los 4 LEDs cada vez que se ejecuta
+el bucle principal de la tarea.
+
+De esta forma si la tarea estuviera haciendo
+polling en vez de actuar unicamente por
+ocurrir una interrupción, sería impredecible
+el próximo LED que se enciende.
+Dado que se usa este sistema que bloquea la 
+tarea hasta que se toca el botón sera predecible
+saber cual es el próximo LED que se 
+enciende al presionar el botón.
+
+Se implementa de esta forma:
+
+\begin{lstlisting}[style=CStyle]
+        void vTareaBoton(void *pvParameters) {
+        uint16_t leds[] = {LD3_Pin, LD4_Pin, LD5_Pin, LD6_Pin};
+        int i = 0;
+
+        while (1) {
+            xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
+            HAL_GPIO_WritePin(GPIOD, leds[i], GPIO_PIN_RESET);
+            i = (i + 1) % 4;
+            HAL_GPIO_WritePin(GPIOD, leds[i], GPIO_PIN_SET);
+            vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
+
+            }
+    }
+\end{lstlisting}
 \end{document}
