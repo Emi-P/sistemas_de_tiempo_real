@@ -357,18 +357,15 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 }
 
 void vTareaBoton(void *pvParameters){
-    TickType_t lastTime = 0;
-    const TickType_t debounceDelay = pdMS_TO_TICKS(50);
 
     while (1){
+
         xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
 
-        TickType_t now = xTaskGetTickCount();
+        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+        HAL_Delay(20); // Debounce
 
-        if ((now - lastTime) > debounceDelay){
-            HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-            lastTime = now;
-        }
+
     }
 }
 
