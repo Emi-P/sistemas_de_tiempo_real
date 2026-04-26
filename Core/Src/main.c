@@ -55,7 +55,9 @@ const osThreadAttr_t defaultTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-SemaphoreHandle_t xButtonSemaphore;
+SemaphoreHandle_t xSem1;
+SemaphoreHandle_t xSem2;
+SemaphoreHandle_t xSem3;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,7 +66,9 @@ static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void vTareaBoton(void *pvParameters);
+void vTareaLED1(void *pvParameters);
+void vTareaLED2(void *pvParameters);
+void vTareaLED3(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -143,9 +147,13 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
-  xButtonSemaphore = xSemaphoreCreateBinary();
-  xTaskCreate(vTareaBoton, "Boton", 128, NULL, 1, NULL);
+  xSem1 = xSemaphoreCreateBinary();
+  xSem2 = xSemaphoreCreateBinary();
+  xSem3 = xSemaphoreCreateBinary();
+  xSemaphoreGive(xSem1) ;
+  xTaskCreate(vTareaLED1, "LED1", 128, NULL, 1, NULL);
+  xTaskCreate(vTareaLED2, "LED2", 128, NULL, 1, NULL);
+  xTaskCreate(vTareaLED3, "LED3", 128, NULL, 1, NULL);
 
   vTaskStartScheduler();
   while (1)
@@ -347,39 +355,30 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    if (GPIO_Pin == GPIO_PIN_0){
-        xSemaphoreGiveFromISR(xButtonSemaphore, &xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    }
-}
-
-void vTareaBoton(void *pvParameters){
-
+void vTareaLED1(void *pvParameters){
     while (1){
-
-        xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
-
+    	xSemaphoreTake( xSem1, portMAX_DELAY );
+        HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
         HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-        vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
-
+        xSemaphoreGive( xSem2 );
     }
 }
-//void vTareaBoton(void *pvParameters) {
-//    uint16_t leds[] = {LD3_Pin, LD4_Pin, LD5_Pin, LD6_Pin};
-//    int i = 0;
-//
-//    while (1) {
-//        xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
-//        HAL_GPIO_WritePin(GPIOD, leds[i], GPIO_PIN_RESET);
-//        i = (i + 1) % 4;
-//        HAL_GPIO_WritePin(GPIOD, leds[i], GPIO_PIN_SET);
-//        vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
-//
-//        }
-//}
+void vTareaLED2(void *pvParameters){
+    while (1){
+    	xSemaphoreTake( xSem2, portMAX_DELAY );
+    	HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+        HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
+        xSemaphoreGive( xSem3 );
+    }
+}
+void vTareaLED3(void *pvParameters){
+    while (1){
+    	xSemaphoreTake( xSem3, portMAX_DELAY );
+        HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
+        HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
+        xSemaphoreGive( xSem1 );
+    }
+}
 
 /* USER CODE END 4 */
 
