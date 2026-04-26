@@ -329,18 +329,14 @@ En cambio la TareaB considera la diferencia.
     }
 \end{lstlisting}
 La lógica de la TareaB es sencila. Solamente se 
-encarga de hacer un toggleo periodico del LED. Notar
-que a pesar de tener intención de considerar Delays absolutos, no 
-va a poder conservar la periodicidad si la TareaA sube de prioridad.
+encarga de hacer un toggleo 'periodico' del LED.
 
 La TareaA agrega algo de lógica para mantener el 
 parpadeo aunque se esté atravesando los 3 segundos de 
 boosteo de prioridad. Al detectar que se presiona el botón,
-setea en pdTRUE la variable que indica que se encuentra 
-durante un boosteo. Además tiempoFin guarda el instante de tiempo
- en que se debería volver a la prioridad original.
-Si ya pasó el momento tiempoFin y se esta un boosteando
-se vuelve la variable enBoost a pdFALSE.
+setea en pdTRUE la variable enBoost que indica que se encuentra 
+durante un boosteo. Además tiempoFin indica el tiempo en que 
+se cumplen 3 segundos de boosteo.
 
 Las esperas en ambas tareas son, no-bloqueantes para observar el starving al tener la TareaA
 en una prioridad mayor.
@@ -382,7 +378,7 @@ en esas ventanas de tiempo a pesar de ser de menor prioridad.
 
 \end{lstlisting}
 El código del callback es sencillo, habilita la posibilidad de tomar
-el sémaforo cada vez que se levanta la interrupción si 
+el semáforo cada vez que se levanta la interrupción si 
 fue por haberse presionado el botón en GPIO\_PIN\_0.
 
 vTareaBoton está casi siempre bloqueada, pues
@@ -423,9 +419,158 @@ Se implementa de esta forma:
     }
 \end{lstlisting}
 
-\section{Ejercicio7}
+\pagebreak
+\section{Ejercicio 7}
 \subsection{Implementación}
+Las tareas implmeentadas son tres:
+\begin{lstlisting}[style=CStyle]
+    void vTareaLED1(void *pvParameters){
+        while (1){
+            xSemaphoreTake( xSem1, portMAX_DELAY );
+            HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
+            xSemaphoreGive( xSem2 );
+        }
+    }
+    void vTareaLED2(void *pvParameters){
+        while (1){
+            xSemaphoreTake( xSem2, portMAX_DELAY );
+            HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET);
+            xSemaphoreGive( xSem3 );
+        }
+    }
+    void vTareaLED3(void *pvParameters){
+        while (1){
+            xSemaphoreTake( xSem3, portMAX_DELAY );
+            HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, GPIO_PIN_SET);
+            xSemaphoreGive( xSem1 );
+        }
+    }
+\end{lstlisting}
+Cada tarea se escribe de forma que solo puede configurar los 
+LEDs una vez que haya podido tomar su semáforo. Además entonces, habilita el siguiente semáforo.
 
+Para que se pueda comenzar el ciclo debería tenerse algún semáforo
+consumible, de otra forma todas las tareas quedan en deadlock. Nos
+encargamos de esto en main(), una vez configurados los semáforos
+\begin{lstlisting}[style=CStyle]
+
+    xSem1 = xSemaphoreCreateBinary();
+    xSem2 = xSemaphoreCreateBinary();
+    xSem3 = xSemaphoreCreateBinary();
+    xSemaphoreGive(xSem1) ;
+  
+    xTaskCreate(vTareaLED1, "LED1", 128, NULL, 1, NULL);
+    xTaskCreate(vTareaLED2, "LED2", 128, NULL, 1, NULL);
+    xTaskCreate(vTareaLED3, "LED3", 128, NULL, 1, NULL);
+  
+    vTaskStartScheduler();
+    //...
+\end{lstlisting}
+\pagebreak
+Notar que los semaforos se declararon globalmente
+\begin{lstlisting}[style=CStyle]
+    /* USER CODE BEGIN PV */
+    SemaphoreHandle_t xSem1;
+    SemaphoreHandle_t xSem2;
+    SemaphoreHandle_t xSem3;
+    /* USER CODE END PV */
+\end{lstlisting}
+\subsection{Conclusiones}
+Para editar el orden en que sucede la secuencia, basta con hacer
+intercambios de semáforos en el código de las tareas.
+Por ejemplo si queremos LED1$\rightarrow$LED3$\rightarrow$LED3$\rightarrow$\dots
+\begin{lstlisting}[style=CStyle]
+    void vTareaLED2(void *pvParameters){
+        while (1){
+            xSemaphoreTake( xSem3, portMAX_DELAY );
+            HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET);
+            xSemaphoreGive( xSem1 );
+        }
+    }
+    void vTareaLED3(void *pvParameters){
+        while (1){
+            xSemaphoreTake( xSem2, portMAX_DELAY );
+            HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, GPIO_PIN_SET);
+            xSemaphoreGive( xSem3 );
+        }
+    }
+\end{lstlisting}
+
+Se presenta una implementación con una sola tarea:
+
+Primero es necesario pasarle ciertos parametros a esta única tarea
+para que sea creada con distintas configuraciones.
+\begin{lstlisting}[style=CStyle]
+    struct parametros_t {
+        uint16_t Pin_prender;
+        uint16_t Pin_apagar;
+        SemaphoreHandle_t sem_to_take;
+        SemaphoreHandle_t sem_to_give;
+        };
+\end{lstlisting}
+\pagebreak
+La tarea implementada es:
+\begin{lstlisting}[style=CStyle]
+    void vTareaLED(void *pvParameters){
+        struct parametros_t parametros;
+        parametros = *(struct parametros_t*) pvParameters;
+        while (1){
+            xSemaphoreTake( parametros.sem_to_take, portMAX_DELAY );
+
+            HAL_GPIO_WritePin(GPIOD, parametros.Pin_prender, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(GPIOD, parametros.Pin_apagar, GPIO_PIN_RESET);
+
+            xSemaphoreGive( parametros.sem_to_give );
+        }
+    }
+\end{lstlisting}
+Y en la main se configura
+\begin{lstlisting}[style=CStyle]
+    // ...
+    p1.Pin_prender = LD5_Pin;
+    p1.Pin_apagar  = LD3_Pin;
+    p1.sem_to_take = xSem1;
+    p1.sem_to_give = xSem2;
+   
+    p2.Pin_prender = LD3_Pin;
+    p2.Pin_apagar  = LD4_Pin;
+    p2.sem_to_take = xSem2;
+    p2.sem_to_give = xSem3;
+   
+    p3.Pin_prender = LD4_Pin;
+    p3.Pin_apagar  = LD5_Pin;
+    p3.sem_to_take = xSem3;
+    p3.sem_to_give = xSem1;
+   
+    xTaskCreate(vTareaLED, "LED1", 128, &p1, 1, NULL);
+    xTaskCreate(vTareaLED, "LED2", 128, &p2, 1, NULL);
+    xTaskCreate(vTareaLED, "LED3", 128, &p3, 1, NULL);
+
+    vTaskStartScheduler();
+\end{lstlisting}
+
+\pagebreak
+\section{Ejercicio 8}
+\subsection{Implementación}
+\begin{lstlisting}[style=CStyle]
+\end{lstlisting}
+\subsection{Conclusiones}
+
+\section{Ejercicio 9}
+\subsection{Implementación}
+\begin{lstlisting}[style=CStyle]
+\end{lstlisting}
+\subsection{Conclusiones}
+
+\section{Ejercicio 10}
+\subsection{Implementación}
+\begin{lstlisting}[style=CStyle]
+\end{lstlisting}
 \subsection{Conclusiones}
 
 \end{document}
