@@ -29,10 +29,11 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-struct ParpadeoParameters {
-	uint16_t Pin;
-	GPIO_TypeDef* Port;
-	uint16_t ms;
+struct parametros_t {
+    uint16_t Pin_prender;
+    uint16_t Pin_apagar;
+    SemaphoreHandle_t sem_to_take;
+    SemaphoreHandle_t sem_to_give;
 };
 /* USER CODE END PTD */
 
@@ -58,6 +59,7 @@ const osThreadAttr_t defaultTask_attributes = {
 SemaphoreHandle_t xSem1;
 SemaphoreHandle_t xSem2;
 SemaphoreHandle_t xSem3;
+static struct parametros_t p1, p2, p3;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,6 +71,7 @@ void StartDefaultTask(void *argument);
 void vTareaLED1(void *pvParameters);
 void vTareaLED2(void *pvParameters);
 void vTareaLED3(void *pvParameters);
+void vTareaLED(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -151,9 +154,30 @@ int main(void)
   xSem2 = xSemaphoreCreateBinary();
   xSem3 = xSemaphoreCreateBinary();
   xSemaphoreGive(xSem1) ;
+
   xTaskCreate(vTareaLED1, "LED1", 128, NULL, 1, NULL);
   xTaskCreate(vTareaLED2, "LED2", 128, NULL, 1, NULL);
   xTaskCreate(vTareaLED3, "LED3", 128, NULL, 1, NULL);
+
+  // Version de una sola tarea.
+//  p1.Pin_prender = LD5_Pin;
+//  p1.Pin_apagar  = LD3_Pin;
+//  p1.sem_to_take = xSem1;
+//  p1.sem_to_give = xSem2;
+//
+//  p2.Pin_prender = LD3_Pin;
+//  p2.Pin_apagar  = LD4_Pin;
+//  p2.sem_to_take = xSem2;
+//  p2.sem_to_give = xSem3;
+//
+//  p3.Pin_prender = LD4_Pin;
+//  p3.Pin_apagar  = LD5_Pin;
+//  p3.sem_to_take = xSem3;
+//  p3.sem_to_give = xSem1;
+//
+//  xTaskCreate(vTareaLED, "LED1", 128, &p1, 1, NULL);
+//  xTaskCreate(vTareaLED, "LED2", 128, &p2, 1, NULL);
+//  xTaskCreate(vTareaLED, "LED3", 128, &p3, 1, NULL);
 
   vTaskStartScheduler();
   while (1)
@@ -358,25 +382,38 @@ static void MX_GPIO_Init(void)
 void vTareaLED1(void *pvParameters){
     while (1){
     	xSemaphoreTake( xSem1, portMAX_DELAY );
-        HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
-        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
+    	HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, GPIO_PIN_RESET);
+    	HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_SET);
         xSemaphoreGive( xSem2 );
     }
 }
 void vTareaLED2(void *pvParameters){
     while (1){
     	xSemaphoreTake( xSem2, portMAX_DELAY );
-    	HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-        HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
+    	HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, GPIO_PIN_RESET);
+    	HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_SET);
         xSemaphoreGive( xSem3 );
     }
 }
 void vTareaLED3(void *pvParameters){
     while (1){
     	xSemaphoreTake( xSem3, portMAX_DELAY );
-        HAL_GPIO_TogglePin(LD4_GPIO_Port, LD4_Pin);
-        HAL_GPIO_TogglePin(LD5_GPIO_Port, LD5_Pin);
+    	HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_RESET);
+    	HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin, GPIO_PIN_SET);
         xSemaphoreGive( xSem1 );
+    }
+}
+
+void vTareaLED(void *pvParameters){
+	struct parametros_t parametros;
+	parametros = *(struct parametros_t*) pvParameters;
+    while (1){
+    	xSemaphoreTake( parametros.sem_to_take, portMAX_DELAY );
+
+        HAL_GPIO_WritePin(GPIOD, parametros.Pin_prender, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(GPIOD, parametros.Pin_apagar, GPIO_PIN_RESET);
+
+        xSemaphoreGive( parametros.sem_to_give );
     }
 }
 
