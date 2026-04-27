@@ -29,11 +29,6 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-struct ParpadeoParameters {
-	uint16_t Pin;
-	GPIO_TypeDef* Port;
-	uint16_t ms;
-};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -56,6 +51,8 @@ const osThreadAttr_t defaultTask_attributes = {
 };
 /* USER CODE BEGIN PV */
 SemaphoreHandle_t xButtonSemaphore;
+TaskHandle_t handleTareaA;
+BaseType_t AIsSuspended = pdFALSE;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,7 +61,8 @@ static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void vTareaBoton(void *pvParameters);
+void vTareaA(void *pvParameters);
+void vTareaB(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -143,9 +141,9 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
   xButtonSemaphore = xSemaphoreCreateBinary();
-  xTaskCreate(vTareaBoton, "Boton", 128, NULL, 1, NULL);
+  xTaskCreate(vTareaA, "Boton", 128, NULL, 1, &handleTareaA);
+  xTaskCreate(vTareaB, "Boton", 128, (void*)handleTareaA, 1, NULL);
 
   vTaskStartScheduler();
   while (1)
@@ -351,35 +349,50 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
     if (GPIO_Pin == GPIO_PIN_0){
-        xSemaphoreGiveFromISR(xButtonSemaphore, &xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    	xSemaphoreGiveFromISR(xButtonSemaphore, &xHigherPriorityTaskWoken);
+    	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+
     }
 }
 
-void vTareaBoton(void *pvParameters){
+void vTareaA(void *pvParameters){
 
     while (1){
-
-        xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
-
-        HAL_GPIO_TogglePin(LD3_GPIO_Port, LD3_Pin);
-        vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
-
+        HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin,GPIO_PIN_SET);
+        vTaskDelay(pdMS_TO_TICKS(50));
+        HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin,GPIO_PIN_SET);
+        vTaskDelay(pdMS_TO_TICKS(50));
+        HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin,GPIO_PIN_SET);
+        vTaskDelay(pdMS_TO_TICKS(50));
+        HAL_GPIO_WritePin(LD6_GPIO_Port, LD6_Pin,GPIO_PIN_SET);
+        vTaskDelay(pdMS_TO_TICKS(50));
+        HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin,GPIO_PIN_RESET);
+        vTaskDelay(pdMS_TO_TICKS(350));
+        HAL_GPIO_WritePin(LD3_GPIO_Port, LD4_Pin,GPIO_PIN_RESET);
+        vTaskDelay(pdMS_TO_TICKS(350));
+        HAL_GPIO_WritePin(LD3_GPIO_Port, LD5_Pin,GPIO_PIN_RESET);
+        vTaskDelay(pdMS_TO_TICKS(350));
+        HAL_GPIO_WritePin(LD3_GPIO_Port, LD6_Pin,GPIO_PIN_RESET);
+        vTaskDelay(pdMS_TO_TICKS(350));
     }
 }
-//void vTareaBoton(void *pvParameters) {
-//    uint16_t leds[] = {LD3_Pin, LD4_Pin, LD5_Pin, LD6_Pin};
-//    int i = 0;
-//
-//    while (1) {
-//        xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
-//        HAL_GPIO_WritePin(GPIOD, leds[i], GPIO_PIN_RESET);
-//        i = (i + 1) % 4;
-//        HAL_GPIO_WritePin(GPIOD, leds[i], GPIO_PIN_SET);
-//        vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
-//
-//        }
-//}
+void vTareaB(void *pvParameters){
+	TaskHandle_t handleTareaA = (TaskHandle_t) pvParameters;
+    while (1){
+    	xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
+    	if ( AIsSuspended == pdTRUE ){
+    		vTaskResume(handleTareaA);
+        AIsSuspended = pdFALSE;
+    	}
+    	else if ( AIsSuspended == pdFALSE ){
+    		vTaskSuspend(handleTareaA);
+        AIsSuspended = pdTRUE;
+    	}
+    	vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
+
 
 /* USER CODE END 4 */
 
