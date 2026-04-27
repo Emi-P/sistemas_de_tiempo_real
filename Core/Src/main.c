@@ -63,6 +63,7 @@ void StartDefaultTask(void *argument);
 /* USER CODE BEGIN PFP */
 void vTareaA(void *pvParameters);
 void vTareaB(void *pvParameters);
+void vTareaBpoller(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -142,8 +143,16 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   xButtonSemaphore = xSemaphoreCreateBinary();
+
+
   xTaskCreate(vTareaA, "Boton", 128, NULL, 1, &handleTareaA);
-  xTaskCreate(vTareaB, "Boton", 128, (void*)handleTareaA, 2, NULL);
+  xTaskCreate(vTareaB, "Boton", 128, (void*)handleTareaA, 1, NULL);
+
+
+  // Con polling
+//  xTaskCreate(vTareaA, "Boton", 128, NULL, 1, &handleTareaA);
+//  xTaskCreate(vTareaBpoller, "Boton", 128, (void*)handleTareaA, 1, NULL);
+
 
   vTaskStartScheduler();
   while (1)
@@ -388,13 +397,29 @@ void vTareaB(void *pvParameters){
     	xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
     	if ( AIsSuspended == pdTRUE ){
     		vTaskResume(handleTareaA);
-        AIsSuspended = pdFALSE;
+    		AIsSuspended = pdFALSE;
     	}
     	else if ( AIsSuspended == pdFALSE ){
     		vTaskSuspend(handleTareaA);
-        AIsSuspended = pdTRUE;
+    		AIsSuspended = pdTRUE;
     	}
-    	vTaskDelay(pdMS_TO_TICKS(100));
+    	vTaskDelay(pdMS_TO_TICKS(100)); // Debounce
+    }
+}
+void vTareaBpoller(void *pvParameters){
+	TaskHandle_t handleTareaA = (TaskHandle_t) pvParameters;
+    while (1){
+    	if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET) {
+			if ( AIsSuspended == pdTRUE ){
+				vTaskResume(handleTareaA);
+				AIsSuspended = pdFALSE;
+			}
+			else if ( AIsSuspended == pdFALSE ){
+				vTaskSuspend(handleTareaA);
+				AIsSuspended = pdTRUE;
+			}
+			vTaskDelay(pdMS_TO_TICKS(10));
+    	}
     }
 }
 
