@@ -143,7 +143,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   xButtonSemaphore = xSemaphoreCreateBinary();
   xTaskCreate(vTareaA, "Boton", 128, NULL, 1, &handleTareaA);
-  xTaskCreate(vTareaB, "Boton", 128, (void*)handleTareaA, 1, NULL);
+  xTaskCreate(vTareaB, "Boton", 128, (void*)handleTareaA, 2, NULL);
 
   vTaskStartScheduler();
   while (1)
@@ -346,34 +346,40 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  static TickType_t lastTick = 0;
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-    if (GPIO_Pin == GPIO_PIN_0){
-    	xSemaphoreGiveFromISR(xButtonSemaphore, &xHigherPriorityTaskWoken);
-    	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  if (GPIO_Pin == GPIO_PIN_0){
+      TickType_t now = xTaskGetTickCountFromISR();
 
-    }
+      if ((now - lastTick) > pdMS_TO_TICKS(200)){
+          xSemaphoreGiveFromISR(xButtonSemaphore, &xHigherPriorityTaskWoken);
+          lastTick = now;
+      }
+
+      portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+  }
 }
 
 void vTareaA(void *pvParameters){
 
     while (1){
         HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin,GPIO_PIN_SET);
-        vTaskDelay(pdMS_TO_TICKS(50));
+        HAL_Delay(50);
         HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin,GPIO_PIN_SET);
-        vTaskDelay(pdMS_TO_TICKS(50));
+        HAL_Delay(50);
         HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin,GPIO_PIN_SET);
-        vTaskDelay(pdMS_TO_TICKS(50));
+        HAL_Delay(50);
         HAL_GPIO_WritePin(LD6_GPIO_Port, LD6_Pin,GPIO_PIN_SET);
-        vTaskDelay(pdMS_TO_TICKS(50));
+        HAL_Delay(50);
         HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin,GPIO_PIN_RESET);
-        vTaskDelay(pdMS_TO_TICKS(350));
+        HAL_Delay(350);
         HAL_GPIO_WritePin(LD3_GPIO_Port, LD4_Pin,GPIO_PIN_RESET);
-        vTaskDelay(pdMS_TO_TICKS(350));
+        HAL_Delay(350);
         HAL_GPIO_WritePin(LD3_GPIO_Port, LD5_Pin,GPIO_PIN_RESET);
-        vTaskDelay(pdMS_TO_TICKS(350));
+        HAL_Delay(250);
         HAL_GPIO_WritePin(LD3_GPIO_Port, LD6_Pin,GPIO_PIN_RESET);
-        vTaskDelay(pdMS_TO_TICKS(350));
+        HAL_Delay(250);
     }
 }
 void vTareaB(void *pvParameters){
