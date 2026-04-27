@@ -63,7 +63,6 @@ void StartDefaultTask(void *argument);
 /* USER CODE BEGIN PFP */
 void vTareaA(void *pvParameters);
 void vTareaB(void *pvParameters);
-void vTareaBpoller(void *pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -142,11 +141,10 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  xButtonSemaphore = xSemaphoreCreateBinary();
 
 
-  xTaskCreate(vTareaA, "Boton", 128, NULL, 1, &handleTareaA);
-  xTaskCreate(vTareaB, "Boton", 128, (void*)handleTareaA, 1, NULL);
+  xTaskCreate(vTareaA, "Boton", 128, NULL, 2, NULL);
+  xTaskCreate(vTareaB, "Boton", 128, NULL, 1, NULL);
 
 
   // Con polling
@@ -369,58 +367,32 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
       portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
   }
 }
-
 void vTareaA(void *pvParameters){
 
-    while (1){
-        HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin,GPIO_PIN_SET);
-        HAL_Delay(50);
-        HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin,GPIO_PIN_SET);
-        HAL_Delay(50);
-        HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin,GPIO_PIN_SET);
-        HAL_Delay(50);
-        HAL_GPIO_WritePin(LD6_GPIO_Port, LD6_Pin,GPIO_PIN_SET);
-        HAL_Delay(50);
-        HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin,GPIO_PIN_RESET);
-        HAL_Delay(350);
-        HAL_GPIO_WritePin(LD3_GPIO_Port, LD4_Pin,GPIO_PIN_RESET);
-        HAL_Delay(350);
-        HAL_GPIO_WritePin(LD3_GPIO_Port, LD5_Pin,GPIO_PIN_RESET);
-        HAL_Delay(250);
-        HAL_GPIO_WritePin(LD3_GPIO_Port, LD6_Pin,GPIO_PIN_RESET);
-        HAL_Delay(250);
-    }
+  TickType_t start = xTaskGetTickCount();
+  const TickType_t duracion = pdMS_TO_TICKS(10000);
+
+  while ((xTaskGetTickCount() - start) < duracion){
+      HAL_GPIO_TogglePin(GPIOD, LD3_Pin);
+      HAL_Delay(50);
+  }
+
+  // Estado final: solo LD4 prendido
+  HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_SET);
+
+  vTaskDelete(NULL);
 }
 void vTareaB(void *pvParameters){
-	TaskHandle_t handleTareaA = (TaskHandle_t) pvParameters;
-    while (1){
-    	xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
-    	if ( AIsSuspended == pdTRUE ){
-    		vTaskResume(handleTareaA);
-    		AIsSuspended = pdFALSE;
-    	}
-    	else if ( AIsSuspended == pdFALSE ){
-    		vTaskSuspend(handleTareaA);
-    		AIsSuspended = pdTRUE;
-    	}
-    	vTaskDelay(pdMS_TO_TICKS(100)); // Debounce
-    }
-}
-void vTareaBpoller(void *pvParameters){
-	TaskHandle_t handleTareaA = (TaskHandle_t) pvParameters;
-    while (1){
-    	if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET) {
-			if ( AIsSuspended == pdTRUE ){
-				vTaskResume(handleTareaA);
-				AIsSuspended = pdFALSE;
-			}
-			else if ( AIsSuspended == pdFALSE ){
-				vTaskSuspend(handleTareaA);
-				AIsSuspended = pdTRUE;
-			}
-			vTaskDelay(pdMS_TO_TICKS(10));
-    	}
-    }
+
+  const TickType_t periodo = pdMS_TO_TICKS(800); // lento
+
+  while (1){
+      HAL_GPIO_WritePin(GPIOD, LD6_Pin, GPIO_PIN_SET);
+      vTaskDelay(periodo);
+
+      HAL_GPIO_WritePin(GPIOD, LD6_Pin, GPIO_PIN_RESET);
+      vTaskDelay(periodo);
+  }
 }
 
 
