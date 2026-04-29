@@ -626,9 +626,138 @@ compartir el CPU con mas tareas.
 
 \section{Ejercicio 9}
 \subsection{Implementación}
+La tarea B se escribe de formas diferentes, según
+se maneje el botón por polling o por interrupción.
+La tarea a será:
 \begin{lstlisting}[style=CStyle]
+    void vTareaA(void *pvParameters){
+        while (1){
+            HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin,GPIO_PIN_SET);
+            HAL_Delay(50);
+            HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin,GPIO_PIN_SET);
+            HAL_Delay(50);
+            HAL_GPIO_WritePin(LD5_GPIO_Port, LD5_Pin,GPIO_PIN_SET);
+            HAL_Delay(50);
+            HAL_GPIO_WritePin(LD6_GPIO_Port, LD6_Pin,GPIO_PIN_SET);
+            HAL_Delay(50);
+            HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin,GPIO_PIN_RESET);
+            HAL_Delay(350);
+            HAL_GPIO_WritePin(LD3_GPIO_Port, LD4_Pin,GPIO_PIN_RESET);
+            HAL_Delay(350);
+            HAL_GPIO_WritePin(LD3_GPIO_Port, LD5_Pin,GPIO_PIN_RESET);
+            HAL_Delay(250);
+            HAL_GPIO_WritePin(LD3_GPIO_Port, LD6_Pin,GPIO_PIN_RESET);
+            HAL_Delay(250);
+            }
+        }
+    \end{lstlisting}
+    Que simplemente controla un patron de luces, intencionalmente
+    se usan esperas no bloqueantes para mostar un problema 
+    del polling. Veamos
+    la tarea B según se usa polling o interrupción
+    
+\underline{\textbf{Manejo por interrupción}}
+\begin{lstlisting}[style=CStyle]
+    void vTareaB(void *pvParameters){
+        TaskHandle_t handleTareaA = (TaskHandle_t) pvParameters;
+        while (1){
+            xSemaphoreTake(xButtonSemaphore, portMAX_DELAY);
+            if ( AIsSuspended == pdTRUE ){
+                vTaskResume(handleTareaA);
+                AIsSuspended = pdFALSE;
+            }
+            else if ( AIsSuspended == pdFALSE ){
+                vTaskSuspend(handleTareaA);
+                AIsSuspended = pdTRUE;
+            }
+        }
+    }       
 \end{lstlisting}
+Recibe el handle de la TareaA por parametro.
+En el mainloop toma el semáforo y solo
+consigue avanzar cuando la interrupción lo
+haga consumible.
+Y decide en que caso suspende o resume la tarea
+según la variable global AIsSuspended.
+
+El callback de la interrupción es:
+
+\begin{lstlisting}[style=CStyle]
+    void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+        static TickType_t lastTick = 0;
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+        if (GPIO_Pin == GPIO_PIN_0){
+            TickType_t now = xTaskGetTickCountFromISR();
+
+            if ((now - lastTick) > pdMS_TO_TICKS(200)){
+                xSemaphoreGiveFromISR(xButtonSemaphore, &xHigherPriorityTaskWoken);
+                lastTick = now;
+            }
+
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        }
+    }
+
+\end{lstlisting}
+Siempre que se presiona el botón hace consumible el semáforo, salvo
+que haya controlado la interrupción recientemente (Debounce).
+
+La main debe crear, las tareas con al menos la misma prioridad (Pero lo lógico es que B tenga mas prioridad). Porque
+a pesar de haberse dado el semáforo, tarea B podría no ser scheduleada
+si tareaA la supera en prioridad.
+\pagebreak
+
+\begin{lstlisting}[style=CStyle]
+    xButtonSemaphore = xSemaphoreCreateBinary();
+
+
+    xTaskCreate(vTareaA, "Boton", 128, NULL, 1, &handleTareaA);
+    xTaskCreate(vTareaB, "Boton", 128, (void*)handleTareaA, 1, NULL);
+    
+\end{lstlisting}
+
+
+\underline{\textbf{Manejo con polling}}
+Solo cambiaremos la tarea B y ya no necesitamos la función de
+callback.
+\begin{lstlisting}[style=CStyle]
+    void vTareaBpoller(void *pvParameters){
+        TaskHandle_t handleTareaA = (TaskHandle_t) pvParameters;
+        while (1){
+            if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_SET) {
+                if ( AIsSuspended == pdTRUE ){
+                    vTaskResume(handleTareaA);
+                    AIsSuspended = pdFALSE;
+                }
+                else if ( AIsSuspended == pdFALSE ){
+                    vTaskSuspend(handleTareaA);
+                    AIsSuspended = pdTRUE;
+                }
+                vTaskDelay(pdMS_TO_TICKS(10));
+            }
+        }
+    }
+    
+\end{lstlisting}
+Pero en este caso es necesario crear las tareas con la misma
+prioridad, si no, alguna monopoliza el CPU, por lo que: o no vemos el patrón
+de luces correctamente; o
+no se va a preguntar nunca por el estado del bóton
 \subsection{Conclusiones}
+Tengamos en cuenta que usamos esperas no-bloqueantes en TareaA.
+Esto en el caso de polling provoca que sean frecuentes
+las ventanas de tiempo donde 
+presionar el botón no tiene efecto alguno pues depende de que al 
+momento de presionarse el botón, la TareaB sea la que se ejecuta.
+Por otro lado tocar el botón manejando
+con interrupción, provoca que siempre se vea la suspensión o 
+reanudamiento de TareaA al presionar.
+La solución con mejor tiempo de respuesta es el polling si la TareaA
+utilizara esperas no-bloqueantes, dado que la interrupción implica
+realizar cambios de contexto para poder suspender o reanudar.
+Pero es claramente menos fiable hacer polling que hacer interrupción
+(presionar y no ver cambios).
 
 \section{Ejercicio 10}
 \subsection{Implementación}
