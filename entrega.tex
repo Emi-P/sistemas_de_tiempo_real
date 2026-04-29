@@ -759,11 +759,64 @@ realizar cambios de contexto para poder suspender o reanudar.
 Pero es claramente menos fiable hacer polling que hacer interrupción
 (presionar y no ver cambios).
 
+\pagebreak
 \section{Ejercicio 10}
 \subsection{Implementación}
+Generamos un patrón muy rápido de leds con:
+\begin{lstlisting}[style=CStyle]
+    void vTareaA(void *pvParameters){
+        TickType_t start = xTaskGetTickCount();
+        const TickType_t duracion = pdMS_TO_TICKS(10000);
+    
+        while ((xTaskGetTickCount() - start) < duracion){
+            HAL_GPIO_TogglePin(GPIOD, LD3_Pin);
+            HAL_Delay(50);
+            HAL_GPIO_TogglePin(GPIOD, LD6_Pin);
+            HAL_Delay(50);
+            HAL_GPIO_TogglePin(GPIOD, LD4_Pin);
+            HAL_Delay(50);
+            HAL_GPIO_TogglePin(GPIOD, LD5_Pin);
+            HAL_Delay(50);
+        }
+    
+        // Estado final: solo LD4 prendido
+        HAL_GPIO_WritePin(GPIOD, LD4_Pin, GPIO_PIN_SET);
+    
+        vTaskDelete(NULL);
+  }
+\end{lstlisting}
+Notar que al final el LED\_4 siempre se prende.
+Para exteriorizar el hecho de que la tarea 
+se elimina, la crearemos junto a una tarea de menor
+prioridad que haga otro patrón mas lento.
+
 \begin{lstlisting}[style=CStyle]
 
 \end{lstlisting}
+\begin{lstlisting}[style=CStyle]
+    void vTareaB(void *pvParameters){
+        const TickType_t periodo = pdMS_TO_TICKS(800); // lento
+
+        while (1){
+            HAL_GPIO_WritePin(GPIOD, LD6_Pin, GPIO_PIN_SET);
+            vTaskDelay(periodo);
+
+            HAL_GPIO_WritePin(GPIOD, LD6_Pin, GPIO_PIN_RESET);
+            vTaskDelay(periodo);
+        }
+    }
+\end{lstlisting}
+Al crearlas con:
+\begin{lstlisting}[style=CStyle]
+    xTaskCreate(vTareaA, "Boton", 128, NULL, 2, NULL);
+    xTaskCreate(vTareaB, "Boton", 128, NULL, 1, NULL);
+  
+    vTaskStartScheduler();
+\end{lstlisting}
 \subsection{Conclusiones}
+
+Notar que mientras la tarea A exista, B nunca debería ejecutarse.
+Por lo que nunca vemos el patron de parpadeo lento, hasta que 
+efectivamente pasaron los 10 segundos y A se elimina a si misma.
 
 \end{document}
