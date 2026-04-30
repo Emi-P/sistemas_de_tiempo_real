@@ -616,13 +616,28 @@ En este ejercicio particular, el uso de
 un mutex garantiza la exclusión mutua
 sobre los LEDs, por lo que
 el efecto visual no se ve afectado
-incluso si se usa HAL\_Delay().
-Sin embargo, esta solución no es
-adecuada en un entorno 
-RTOS. El uso de HAL\_Delay()
-resulta aceptable solo en contextos
-muy simples donde no hay que
-compartir el CPU con mas tareas.
+por la concurrencia.
+
+Pero al correr este programa en una placa,
+sucede que solo uno de los patrones es visible.
+El arbitraje esta funcionando, pero a pesar de esto
+la tarea que tomo el mutex primero, a pesar de que lo entrega,
+es capaz de tomarlo nuevamente antes que la otra tarea.
+Por lo que termina monopolizando el CPU.
+
+Esto se pude cambiar agregando una espera activa al final
+que haga perder el resto del tick y el scheduler decida
+entregar el CPU a la tarea que todavia no tuvo CPU. Resultando 
+que las tareas alternan una y una.
+
+Otra opción para introducir competencia real, es introducir
+una cantidad aleatoria de ticks (en el rango 1,3) de espera
+previa a ala instruccion de intentar tomar el sémaforo.
+
+
+Otra opción
+
+
 
 \section{Ejercicio 9}
 \subsection{Implementación}
